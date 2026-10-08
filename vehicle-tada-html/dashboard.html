@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ड्यासबोर्ड</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50">
+
+<main class="p-4 md:p-8">
+  <h1 class="text-3xl font-bold text-slate-800 mb-2">ड्यासबोर्ड</h1>
+  <p class="text-slate-500 mb-8" id="welcomeLine"></p>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div class="text-sm text-slate-500">लगबुक</div>
+      <div id="statLogbooks" class="text-3xl font-bold text-blue-700 mt-2">0</div>
+    </div>
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div class="text-sm text-slate-500">भ्रमण आदेश</div>
+      <div id="statTada" class="text-3xl font-bold text-green-700 mt-2">0</div>
+    </div>
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div class="text-sm text-slate-500">कुल किलोमिटर</div>
+      <div id="statKm" class="text-3xl font-bold text-purple-700 mt-2">0</div>
+    </div>
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div class="text-sm text-slate-500">कुल इन्धन (L)</div>
+      <div id="statFuel" class="text-3xl font-bold text-amber-700 mt-2">0</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-3 gap-4 mb-8">
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-amber-200">
+      <div class="text-sm text-amber-700">प्रतिक्षामा</div>
+      <div id="statPending" class="text-3xl font-bold text-amber-700 mt-1">0</div>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-green-200">
+      <div class="text-sm text-green-700">स्वीकृत</div>
+      <div id="statApproved" class="text-3xl font-bold text-green-700 mt-1">0</div>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-red-200">
+      <div class="text-sm text-red-700">अस्वीकृत</div>
+      <div id="statRejected" class="text-3xl font-bold text-red-700 mt-1">0</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+      <div class="p-5 border-b flex items-center justify-between">
+        <h2 class="font-bold text-lg">पछिल्ला लगबुक</h2>
+        <a href="logbook-new.html" class="text-sm text-blue-700 hover:underline">+ नयाँ</a>
+      </div>
+      <div id="recentLogbooks" class="p-5 text-slate-500 text-sm"></div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+      <div class="p-5 border-b flex items-center justify-between">
+        <h2 class="font-bold text-lg">पछिल्ला भ्रमण आदेश</h2>
+        <a href="tada-new.html" class="text-sm text-blue-700 hover:underline">+ नयाँ</a>
+      </div>
+      <div id="recentTada" class="p-5 text-slate-500 text-sm"></div>
+    </div>
+  </div>
+</main>
+
+<script src="assets/js/storage.js"></script>
+<script src="assets/js/dates.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  if (!App.requireAuth()) throw new Error('redirect');
+  App.renderShell('dashboard.html');
+
+  const me = App.currentUser();
+  const isAdmin = me.role === 'ADMIN';
+
+  document.getElementById('welcomeLine').textContent =
+    `स्वागत, ${me.name} (${me.userId}) — ${isAdmin ? 'एडमिन' : 'प्रयोगकर्ता'}`;
+
+  function badge(s) {
+    if (s === 'APPROVED') return '<span class="text-xs text-green-700 font-semibold">[स्वीकृत]</span>';
+    if (s === 'REJECTED') return '<span class="text-xs text-red-700 font-semibold">[अस्वीकृत]</span>';
+    return '<span class="text-xs text-amber-700 font-semibold">[प्रतिक्षा]</span>';
+  }
+
+  function refresh() {
+    const allLogbooks = DB.getLogbooks();
+    const allTada = DB.getTada();
+
+    const logbooks = isAdmin ? allLogbooks : allLogbooks.filter(x => x.createdByUserId === me.userId);
+    const tada = isAdmin ? allTada : allTada.filter(x => x.createdByUserId === me.userId);
+
+    document.getElementById('statLogbooks').textContent = logbooks.length;
+    document.getElementById('statTada').textContent = tada.length;
+
+    document.getElementById('statKm').textContent =
+      logbooks.reduce((s, l) => s + (Number(l.totalKm) || 0), 0).toLocaleString();
+    document.getElementById('statFuel').textContent =
+      logbooks.reduce((s, l) => s + (Number(l.totalFuel) || 0), 0).toFixed(2);
+
+    const scope = isAdmin ? [...allLogbooks, ...allTada] : [...logbooks, ...tada];
+    document.getElementById('statPending').textContent = scope.filter(x => x.status === 'PENDING').length;
+    document.getElementById('statApproved').textContent = scope.filter(x => x.status === 'APPROVED').length;
+    document.getElementById('statRejected').textContent = scope.filter(x => x.status === 'REJECTED').length;
+
+    const rl = logbooks.slice(-5).reverse();
+    document.getElementById('recentLogbooks').innerHTML = rl.length === 0
+      ? 'कुनै रेकर्ड छैन'
+      : rl.map(l => `
+        <div class="py-2 border-b last:border-0 flex justify-between items-center">
+          <div>
+            <div class="font-medium text-slate-800">${l.recordNumber} ${badge(l.status)}</div>
+            <div class="text-xs text-slate-500">${l.vehicleNumber} • ${l.driverName}</div>
+          </div>
+          <div class="text-right">
+            <div class="font-bold text-blue-700">${l.totalKm} km</div>
+            <div class="text-xs text-slate-500">${l.documentDateBs || l.createdAtBs}</div>
+          </div>
+        </div>`).join('');
+
+    const rt = tada.slice(-5).reverse();
+    document.getElementById('recentTada').innerHTML = rt.length === 0
+      ? 'कुनै रेकर्ड छैन'
+      : rt.map(t => `
+        <div class="py-2 border-b last:border-0 flex justify-between items-center">
+          <div>
+            <div class="font-medium text-slate-800">${t.orderNumber} ${badge(t.status)}</div>
+            <div class="text-xs text-slate-500">${t.employeeName} → ${t.destination}</div>
+          </div>
+          <div class="text-right text-xs text-slate-500">${t.startBs}</div>
+        </div>`).join('');
+  }
+
+  refresh();
+</script>
+</body>
+</html>

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>स्वीकृति केन्द्र — Approvals</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+.doc-preview { font-family: 'Noto Sans Devanagari','Mangal','Kalimati',Arial,sans-serif; color:#000; font-size:12px; }
+.doc-preview table { border-collapse: collapse; width: 100%; }
+.doc-preview th, .doc-preview td { border: 1px solid #000; padding: 4px 6px; font-size: 11px; vertical-align: top; }
+.doc-preview th { background: #f3f4f6; text-align: center; font-weight: 600; }
+.doc-preview .header-line { text-align: center; margin: 2px 0; }
+.doc-preview .header-line.title { font-size: 15px; font-weight: 700; margin-top: 8px; }
+.doc-preview .header-line.sub { font-size: 12px; }
+.doc-preview .section-title { text-align: center; font-size: 14px; font-weight: 700; margin: 14px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #000; }
+.doc-preview .signature-row { display: flex; justify-content: space-between; margin-top: 50px; }
+.doc-preview .signature-block { width: 30%; text-align: center; }
+.doc-preview .signature-line { border-top: 1px solid #000; margin: 30px 0 4px; }
+.doc-preview .meta-info { display: flex; justify-content: space-between; margin: 12px 0; }
+.doc-preview .field-row { display: flex; margin: 8px 0; }
+.doc-preview .field-row .label { font-weight: 600; min-width: 42%; }
+.doc-preview .field-row .value { flex: 1; }
+.doc-preview .divider { border-top: 2px dashed #000; margin: 24px 0 12px; }
+.doc-preview .admin-section { font-size: 11px; background: #fafafa; padding: 10px 14px; border: 1px solid #999; }
+.doc-preview .emblem { text-align: center; margin-bottom: 6px; }
+.doc-preview .emblem img { width: 55px; height: 55px; object-fit: contain; display: inline-block; }
+</style>
+</head>
+<body class="bg-slate-50">
+
+<main class="p-4 md:p-8">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-slate-800">स्वीकृति केन्द्र</h1>
+    <p class="text-slate-500">Approve or Reject pending documents</p>
+  </div>
+
+  <div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-amber-200">
+      <div class="text-sm text-amber-700">प्रतिक्षामा</div>
+      <div id="statPending" class="text-3xl font-bold text-amber-700 mt-1">0</div>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-green-200">
+      <div class="text-sm text-green-700">स्वीकृत</div>
+      <div id="statApproved" class="text-3xl font-bold text-green-700 mt-1">0</div>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-red-200">
+      <div class="text-sm text-red-700">अस्वीकृत</div>
+      <div id="statRejected" class="text-3xl font-bold text-red-700 mt-1">0</div>
+    </div>
+  </div>
+
+  <div class="flex gap-2 mb-4 flex-wrap">
+    <button id="tabLogbook" onclick="switchTab('logbook')"
+            class="px-5 py-2 rounded-lg font-semibold bg-blue-700 text-white">लगबुक</button>
+    <button id="tabTada" onclick="switchTab('tada')"
+            class="px-5 py-2 rounded-lg font-semibold bg-slate-200 text-slate-700">भ्रमण आदेश</button>
+    <div class="ml-auto flex items-center gap-2">
+      <select id="statusFilter" onchange="render()" class="px-3 py-2 border rounded-lg text-sm">
+        <option value="PENDING">प्रतिक्षामा</option>
+        <option value="APPROVED">स्वीकृत</option>
+        <option value="REJECTED">अस्वीकृत</option>
+        <option value="ALL">सबै</option>
+      </select>
+      <input id="searchBox" oninput="render()" placeholder="खोज्नुहोस्..."
+             class="px-3 py-2 border rounded-lg text-sm w-56">
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div id="listArea" class="divide-y divide-slate-200"></div>
+  </div>
+</main>
+
+<div id="detailModal" class="hidden fixed inset-0 bg-black/60 z-50 overflow-y-auto p-4">
+  <div class="max-w-[1200px] mx-auto bg-white rounded-xl shadow-2xl my-4">
+    <div class="sticky top-0 bg-white border-b p-4 flex items-center justify-between rounded-t-xl z-10">
+      <div>
+        <h3 class="font-bold text-lg" id="detailTitle">रेकर्ड</h3>
+        <p class="text-xs text-slate-500" id="detailSubtitle"></p>
+      </div>
+      <button onclick="closeDetail()"
+              class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg">✕ बन्द</button>
+    </div>
+    <div class="p-6 bg-slate-100">
+      <div id="detailBody" class="doc-preview bg-white shadow-lg p-6"></div>
+    </div>
+    <div class="p-4 border-t flex justify-end gap-2 bg-white rounded-b-xl sticky bottom-0">
+      <button id="btnApprove" onclick="approveFromDetail()"
+              class="bg-green-700 text-white px-6 py-2 rounded-lg hover:bg-green-800 font-semibold">✅ स्वीकृत गर्नुहोस्</button>
+      <button id="btnReject" onclick="rejectFromDetail()"
+              class="bg-red-700 text-white px-6 py-2 rounded-lg hover:bg-red-800 font-semibold">❌ अस्वीकृत गर्नुहोस्</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/storage.js"></script>
+<script src="assets/js/dates.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  if (!App.requireAdmin()) throw new Error('redirect');
+  App.renderShell('approvals.html');
+
+  var currentTab = 'logbook';
+  var currentDetail = null;
+
+  function switchTab(t) {
+    currentTab = t;
+    document.getElementById('tabLogbook').className = t === 'logbook'
+      ? 'px-5 py-2 rounded-lg font-semibold bg-blue-700 text-white'
+      : 'px-5 py-2 rounded-lg font-semibold bg-slate-200 text-slate-700';
+    document.getElementById('tabTada').className = t === 'tada'
+      ? 'px-5 py-2 rounded-lg font-semibold bg-blue-700 text-white'
+      : 'px-5 py-2 rounded-lg font-semibold bg-slate-200 text-slate-700';
+    render();
+  }
+
+  function statusBadge(s) {
+    if (s === 'APPROVED') return '<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs font-semibold">स्वीकृत</span>';
+    if (s === 'REJECTED') return '<span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs font-semibold">अस्वीकृत</span>';
+    return '<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs font-semibold">प्रतिक्षामा</span>';
+  }
+
+  function displayNumber(kind, rec) {
+    if (kind === 'LOGBOOK') {
+      return (rec.status === 'APPROVED' && rec.approvedRecordNumber)
+        ? rec.approvedRecordNumber
+        : (rec.draftId || 'मस्यौदा');
+    }
+    return (rec.status === 'APPROVED' && rec.approvedOrderNumber)
+      ? rec.approvedOrderNumber
+      : (rec.draftId || 'मस्यौदा');
+  }
+
+  function esc(str) {
+    return String(str == null ? '' : str).replace(/[&<>"']/g, function(ch) {
+      if (ch === '&') return '&amp;';
+      if (ch === '<') return '&lt;';
+      if (ch === '>') return '&gt;';
+      if (ch === '"') return '&quot;';
+      return '&#39;';
+    });
+  }
+
+  function watermarkHtml(status) {
+    if (status === 'APPROVED') return '';
+    var label = (status === 'REJECTED') ? 'अस्वीकृत' : 'प्रतिक्षामा';
+    var color = (status === 'REJECTED') ? '#dc2626' : '#d97706';
+    return '<div style="text-align:center;margin-bottom:8px">' +
+      '<span style="display:inline-block;padding:4px 14px;border:2px solid ' + color +
+      ';color:' + color + ';font-weight:700;border-radius:6px;font-size:12px;letter-spacing:2px">' +
+      label + '</span></div>';
+  }
+
+  function approvalLine(status, approvedByName, approvedByUserId, approvedAtBs) {
+    if (status !== 'APPROVED' || !approvedByName) return '';
+    var out = '<br>स्वीकृत: ' + esc(approvedByName) +
+              ' (' + esc(approvedByUserId || '') + ')';
+    if (approvedAtBs) {
+      out += ' — ' + toDevanagariDate(approvedAtBs);
+    }
+    return out;
+  }
+
+  function render() {
+    var status = document.getElementById('statusFilter').value;
+    var q = document.getElementById('searchBox').value.toLowerCase();
+
+    var allL = DB.getLogbooks();
+    var allT = DB.getTada();
+    var all = allL.concat(allT);
+    document.getElementById('statPending').textContent = all.filter(function(x){return x.status === 'PENDING';}).length;
+    document.getElementById('statApproved').textContent = all.filter(function(x){return x.status === 'APPROVED';}).length;
+    document.getElementById('statRejected').textContent = all.filter(function(x){return x.status === 'REJECTED';}).length;
+
+    var items = [];
+    if (currentTab === 'logbook') {
+      items = allL.slice().reverse().map(function(l) {
+        return {
+          kind: 'LOGBOOK',
+          id: l.id,
+          number: displayNumber('LOGBOOK', l),
+          title: l.vehicleNumber + ' — ' + l.driverName,
+          sub: 'KM: ' + l.totalKm + ' • इन्धन: ' + ((l.totalFuel || 0).toFixed(2)) + ' L • मिति: ' + (l.documentDateBs || l.createdAtBs || ''),
+          createdBy: l.createdByName || 'अज्ञात',
+          createdById: l.createdByUserId || '—',
+          status: l.status,
+          rejectionReason: l.rejectionReason,
+          approvedBy: l.approvedByName,
+          approvedByUserId: l.approvedByUserId,
+          approvedAtBs: l.approvedAtBs,
+        };
+      });
+    } else {
+      items = allT.slice().reverse().map(function(t) {
+        return {
+          kind: 'TADA',
+          id: t.id,
+          number: displayNumber('TADA', t),
+          title: t.employeeName + ' → ' + t.destination,
+          sub: t.startBs + ' – ' + t.endBs + ' (' + t.durationDays + ' दिन) • पेश्की: रु ' + ((t.advanceAmount || 0).toFixed(2)),
+          createdBy: t.createdByName || 'अज्ञात',
+          createdById: t.createdByUserId || '—',
+          status: t.status,
+          rejectionReason: t.rejectionReason,
+          approvedBy: t.approvedByName,
+          approvedByUserId: t.approvedByUserId,
+          approvedAtBs: t.approvedAtBs,
+        };
+      });
+    }
+
+    if (status !== 'ALL') items = items.filter(function(x){return x.status === status;});
+    if (q) items = items.filter(function(x) {
+      return (x.number || '').toLowerCase().indexOf(q) !== -1 ||
+             (x.title || '').toLowerCase().indexOf(q) !== -1 ||
+             (x.createdBy || '').toLowerCase().indexOf(q) !== -1;
+    });
+
+    var area = document.getElementById('listArea');
+    if (items.length === 0) {
+      area.innerHTML = '<div class="p-10 text-center text-slate-400">कुनै रेकर्ड भेटिएन</div>';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var numClass = (it.status === 'APPROVED') ? 'text-blue-700' : 'text-slate-600';
+      html += '<div class="p-5 flex flex-col md:flex-row md:items-center gap-3">';
+      html += '<div class="flex-1 min-w-0">';
+      html += '<div class="flex items-center gap-2 mb-1">';
+      html += '<span class="font-bold ' + numClass + '">' + esc(it.number) + '</span>';
+      html += statusBadge(it.status);
+      html += '</div>';
+      html += '<div class="font-medium text-slate-800 truncate">' + esc(it.title) + '</div>';
+      html += '<div class="text-xs text-slate-500 mt-1">' + esc(it.sub) + '</div>';
+      html += '<div class="text-xs text-slate-500 mt-1">बनाउने: <b>' + esc(it.createdBy) +
+              '</b> (ID: <span class="font-mono">' + esc(it.createdById) + '</span>)</div>';
+
+      if (it.status === 'APPROVED' && it.approvedBy) {
+        html += '<div class="text-xs text-green-700 mt-1">स्वीकृत: ' + esc(it.approvedBy) +
+                ' (' + esc(it.approvedByUserId || '') + ')' +
+                (it.approvedAtBs ? ' — ' + toDevanagariDate(it.approvedAtBs) : '') + '</div>';
+      }
+      if (it.status === 'REJECTED' && it.rejectionReason) {
+        html += '<div class="text-xs text-red-700 mt-1">कारण: ' + esc(it.rejectionReason) + '</div>';
+      }
+      html += '</div>';
+
+      html += '<div class="flex gap-2 flex-shrink-0 flex-wrap">';
+      html += '<button onclick="viewDetail(\'' + it.kind + '\',\'' + it.id + '\')" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-slate-800 font-semibold">👁️ हेर्नुहोस्</button>';
+      if (it.status === 'PENDING') {
+        html += '<button onclick="quickApprove(\'' + it.kind + '\',\'' + it.id + '\')" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-800 font-semibold">✅ स्वीकृत</button>';
+        html += '<button onclick="quickReject(\'' + it.kind + '\',\'' + it.id + '\')" class="bg-red-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-800 font-semibold">❌ अस्वीकृत</button>';
+      }
+      html += '</div></div>';
+    }
+    area.innerHTML = html;
+  }
+
+  function viewDetail(kind, id) {
+    var rec = (kind === 'LOGBOOK') ? DB.findLogbookById(id) : DB.findTadaById(id);
+    if (!rec) return;
+
+    currentDetail = { kind: kind, id: id };
+
+    document.getElementById('detailTitle').textContent =
+      (kind === 'LOGBOOK') ? ('लगबुक — ' + displayNumber('LOGBOOK', rec))
+                            : ('भ्रमण आदेश — ' + displayNumber('TADA', rec));
+    document.getElementById('detailSubtitle').textContent =
+      'बनाउने: ' + rec.createdByName + ' (' + rec.createdByUserId + ')';
+
+    var html = (kind === 'LOGBOOK') ? buildLogbookPreview(rec) : buildTadaPreview(rec);
+    document.getElementById('detailBody').innerHTML = html;
+
+    var show = (rec.status === 'PENDING');
+    document.getElementById('btnApprove').style.display = show ? '' : 'none';
+    document.getElementById('btnReject').style.display = show ? '' : 'none';
+
+    document.getElementById('detailModal').classList.remove('hidden');
+  }
+
+  function buildLogbookPreview(l) {
+    var org = DB.getOrg();
+    var status = l.status;
+    var numLabel = (status === 'APPROVED' && l.approvedRecordNumber)
+      ? esc(l.approvedRecordNumber)
+      : 'मस्यौदा (Draft)';
+
+    var rowsHtml = '';
+    var journeys = l.journeys || [];
+    for (var i = 0; i < journeys.length; i++) {
+      var j = journeys[i];
+      rowsHtml += '<tr>';
+      rowsHtml += '<td style="text-align:center">' + toDevanagariDate(j.bsDate) + '</td>';
+      rowsHtml += '<td>' + esc(j.from) + '</td>';
+      rowsHtml += '<td>' + esc(j.to) + '</td>';
+      rowsHtml += '<td style="text-align:right">' + toDevanagari(j.startKm) + '</td>';
+      rowsHtml += '<td style="text-align:right">' + toDevanagari(j.endKm) + '</td>';
+      rowsHtml += '<td style="text-align:right">' + toDevanagari(j.endKm - j.startKm) + '</td>';
+      rowsHtml += '<td style="text-align:center">' + esc(j.demandFormNo || '') + '</td>';
+      rowsHtml += '<td style="text-align:right">' + (j.fuel ? toDevanagari(j.fuel) : '') + '</td>';
+      rowsHtml += '<td style="text-align:right">' + (j.lubricant ? toDevanagari(j.lubricant) : '') + '</td>';
+      rowsHtml += '<td style="text-align:right">' + (j.grease ? toDevanagari(j.grease) : '') + '</td>';
+      rowsHtml += '<td style="text-align:right">' + (j.gearOil ? toDevanagari(j.gearOil) : '') + '</td>';
+      rowsHtml += '<td style="text-align:right">' + (j.other ? toDevanagari(j.other) : '') + '</td>';
+      rowsHtml += '<td>' + esc(j.purpose) + '</td>';
+      rowsHtml += '<td>' + esc(j.officerName) + '</td>';
+      rowsHtml += '<td></td><td></td></tr>';
+    }
+
+    var tKm = 0, tF = 0;
+    for (var k = 0; k < journeys.length; k++) {
+      tKm += (journeys[k].endKm - journeys[k].startKm);
+      tF  += parseFloat(journeys[k].fuel) || 0;
+    }
+
+    var docDateStr = (l.documentDateBs && /^\d{4}\/\d{2}\/\d{2}$/.test(l.documentDateBs))
+      ? toDevanagariDate(l.documentDateBs)
+      : '___________________';
+
+    return watermarkHtml(status) +
+      '<div class="emblem"><img src="assets/img/nepal-emblem.png" alt="Nepal Emblem"></div>' +
+      '<div class="header-line title">' + esc(org.province || '') + '</div>' +
+      '<div class="header-line sub">' + esc(org.ministry || '') + '</div>' +
+      '<div class="header-line sub">' + esc(org.program || '') + '</div>' +
+      '<div class="header-line sub">कार्यालय कोड नं.: ' + esc(l.officeCode || '') + '</div>' +
+      '<div class="header-line title" style="margin-top:14px">सवारी साधन र मेसिन प्रयोगको लगबुक</div>' +
+
+      '<div class="meta-info">' +
+        '<div>' +
+          '<div><b>सवारी नं.:</b> ' + esc(l.vehicleNumber) + '</div>' +
+          '<div><b>सवारी साधन/मेसिनरीको नाम:</b> ' + esc(l.vehicleName) + '</div>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<div><b>चालक/अपरेटर:</b> ' + esc(l.driverName) + '</div>' +
+          '<div><b>पद:</b> ' + esc(l.driverPosition || '') + '</div>' +
+          '<div><b>तह:</b> ' + esc(l.driverLevel || '') + '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<table>' +
+        '<thead>' +
+          '<tr>' +
+            '<th>मिति</th><th colspan="2">ठाउँ</th><th colspan="2">किलोमिटर</th>' +
+            '<th>जम्मा</th><th>माग फारम नं</th>' +
+            '<th colspan="5">पेट्रोलियम पदार्थ</th>' +
+            '<th>उद्देश्य</th><th colspan="2">प्रयोग गर्ने कर्मचारी</th><th>कैफियत</th>' +
+          '</tr>' +
+          '<tr>' +
+            '<th></th><th>बाट</th><th>सम्म</th><th>बाट</th><th>सम्म</th>' +
+            '<th></th><th></th><th>इन्धन</th><th>लुब्रिकेन्ट</th><th>ग्रिज</th>' +
+            '<th>गेयर आयल</th><th>अन्य</th><th></th>' +
+            '<th>नाम</th><th>दस्तखत</th><th></th>' +
+          '</tr>' +
+        '</thead>' +
+        '<tbody>' +
+          rowsHtml +
+          '<tr style="font-weight:600;background:#f9fafb">' +
+            '<td colspan="5" style="text-align:right">जम्मा:</td>' +
+            '<td style="text-align:right">' + toDevanagari(tKm) + '</td>' +
+            '<td></td>' +
+            '<td style="text-align:right">' + toDevanagari(tF.toFixed(2)) + '</td>' +
+            '<td colspan="4"></td>' +
+            '<td colspan="5"></td>' +
+          '</tr>' +
+        '</tbody>' +
+      '</table>' +
+
+      '<div class="signature-row">' +
+        '<div class="signature-block">' +
+          '<div class="signature-line"></div>' +
+          '<div><b>चालक/अपरेटर</b></div>' +
+          '<div>' + esc(l.driverName) + '</div>' +
+        '</div>' +
+        '<div class="signature-block">' +
+          '<div class="signature-line"></div>' +
+          '<div><b>दस्तखत</b></div>' +
+        '</div>' +
+        '<div class="signature-block">' +
+          '<div class="signature-line"></div>' +
+          '<div><b>मिति</b></div>' +
+          '<div>' + docDateStr + '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div style="margin-top:20px;text-align:center;font-size:10px;color:#555">' +
+        'कागजात नं: ' + numLabel +
+        ' — बनाउने: ' + esc(l.createdByName) + ' (' + esc(l.createdByUserId) + ')' +
+        approvalLine(l.status, l.approvedByName, l.approvedByUserId, l.approvedAtBs) +
+      '</div>';
+  }
+
+  function buildTadaPreview(t) {
+    var org = DB.getOrg();
+    var status = t.status;
+    var tO = t.transportOffice ? '☑' : '☐';
+    var tP = t.transportPublic ? '☑' : '☐';
+    var tH = t.transportHired  ? '☑' : '☐';
+
+    var numLabel = (status === 'APPROVED' && t.approvedOrderNumber)
+      ? esc(t.approvedOrderNumber)
+      : 'मस्यौदा (Draft)';
+    var orderNoLine = (status === 'APPROVED')
+      ? ('आदेश नं: ' + esc(t.approvedOrderNumber))
+      : 'आदेश नं: मस्यौदा (Draft)';
+
+    var orderDateStr = (t.orderDateBs && /^\d{4}\/\d{2}\/\d{2}$/.test(t.orderDateBs))
+      ? toDevanagariDate(t.orderDateBs)
+      : '___________________';
+
+    var startStr = (t.startBs && /^\d{4}\/\d{2}\/\d{2}$/.test(t.startBs))
+      ? toDevanagariDate(t.startBs) : '___________________';
+    var endStr = (t.endBs && /^\d{4}\/\d{2}\/\d{2}$/.test(t.endBs))
+      ? toDevanagariDate(t.endBs) : '___________________';
+
+    return watermarkHtml(status) +
+      '<div class="emblem"><img src="assets/img/nepal-emblem.png" alt="Nepal Emblem"></div>' +
+      '<div class="header-line title">' + esc(org.province || '') + '</div>' +
+      '<div class="header-line sub">' + esc(org.ministry || '') + '</div>' +
+      '<div class="header-line sub">' + esc(org.program || '') + '</div>' +
+      '<div class="header-line sub">कार्यालय कोड नं.: ' + esc(t.officeCode || '') + '</div>' +
+
+      '<div class="section-title">' + esc(t.travelType) + ' भ्रमण आदेश</div>' +
+
+      '<div style="text-align:right;margin:10px 0">' +
+        '<div><b>' + orderNoLine + '</b></div>' +
+        '<div><b>मिति:</b> ' + orderDateStr + '</div>' +
+      '</div>' +
+
+      '<div class="field-row"><div class="label">भ्रमण गर्ने पदाधिकारी/कर्मचारीको नाम:</div><div class="value">' + esc(t.employeeName) + '</div></div>' +
+      '<div class="field-row"><div class="label">पद:</div><div class="value">' + esc(t.position) + '</div></div>' +
+      '<div class="field-row"><div class="label">कार्यालय:</div><div class="value">' + esc(t.office) + '</div></div>' +
+      '<div class="field-row"><div class="label">भ्रमण गर्ने स्थान:</div><div class="value">' + esc(t.destination) + '</div></div>' +
+      '<div class="field-row"><div class="label">भ्रमणको उद्देश्य:</div><div class="value">' + esc(t.purpose) + '</div></div>' +
+      '<div class="field-row"><div class="label">भ्रमण गर्ने अवधि:</div><div class="value">' +
+        startStr + ' देखी ' + endStr + ' सम्म (' + toDevanagari(t.durationDays) + ' दिन)</div></div>' +
+      '<div class="field-row"><div class="label">भ्रमण गर्ने साधन:</div><div class="value">' +
+        tO + ' कार्यालयको &nbsp; ' + tP + ' सार्वजनिक &nbsp; ' + tH + ' भाडाको</div></div>' +
+      '<div class="field-row"><div class="label">पेश्की रकम:</div><div class="value">' +
+        (t.advanceAmount ? 'रु. ' + toDevanagari(t.advanceAmount.toFixed(2)) : '') + '</div></div>' +
+      '<div class="field-row"><div class="label">अन्य विवरण:</div><div class="value">' + esc(t.otherDetails || '') + '</div></div>' +
+
+      '<div class="signature-row">' +
+        '<div class="signature-block">' +
+          '<div class="signature-line"></div>' +
+          '<div><b>भ्रमण गर्ने पदाधिकारी</b></div>' +
+          '<div>मितिः ' + orderDateStr + '</div>' +
+        '</div>' +
+        '<div class="signature-block">' +
+          '<div class="signature-line"></div>' +
+          '<div><b>सिफारिस गर्ने</b></div>' +
+          '<div>मितिः ' + orderDateStr + '</div>' +
+        '</div>' +
+        '<div class="signature-block">' +
+          '<div class="signature-line"></div>' +
+          '<div><b>स्वीकृत गर्ने</b></div>' +
+          '<div>मितिः ' + orderDateStr + '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="divider"></div>' +
+
+      '<div class="admin-section">' +
+        '<b>प्रशासन शाखाले भर्ने</b>' +
+        '<div style="display:flex;justify-content:space-between;margin-top:8px">' +
+          '<div><b>हाजिरी खातामा जनाएको मिति:</b> ___________________</div>' +
+          '<div><b>जनाउने कर्मचारीको दस्तखत:</b> ___________________</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div style="margin-top:20px;text-align:center;font-size:10px;color:#555">' +
+        'आदेश नं: ' + numLabel +
+        ' — बनाउने: ' + esc(t.createdByName) + ' (' + esc(t.createdByUserId) + ')' +
+        approvalLine(t.status, t.approvedByName, t.approvedByUserId, t.approvedAtBs) +
+      '</div>';
+  }
+
+  function closeDetail() {
+    document.getElementById('detailModal').classList.add('hidden');
+    currentDetail = null;
+  }
+
+  function approveFromDetail() {
+    if (!currentDetail) return;
+    quickApprove(currentDetail.kind, currentDetail.id);
+    closeDetail();
+  }
+
+  function rejectFromDetail() {
+    if (!currentDetail) return;
+    quickReject(currentDetail.kind, currentDetail.id);
+    closeDetail();
+  }
+
+  function quickApprove(kind, id) {
+    try {
+      DB.decide(kind, id, 'APPROVED');
+      App.toast('✅ स्वीकृत गरियो — आधिकारिक नं जारी भयो', 'success');
+      render();
+    } catch (e) { App.toast('❌ ' + e.message, 'error'); }
+  }
+
+  function quickReject(kind, id) {
+    var reason = prompt('अस्वीकृत गर्नुको कारण:');
+    if (reason === null) return;
+    if (!reason.trim()) return App.toast('कारण आवश्यक', 'warn');
+    try {
+      DB.decide(kind, id, 'REJECTED', { reason: reason.trim() });
+      App.toast('❌ अस्वीकृत गरियो', 'warn');
+      render();
+    } catch (e) { App.toast('❌ ' + e.message, 'error'); }
+  }
+
+  render();
+</script>
+</body>
+</html>

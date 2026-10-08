@@ -1,0 +1,116 @@
+/* ─────────────────────────────────────────────────────────────
+   Vehicle Logbook & TADA — print + preview styles
+   ───────────────────────────────────────────────────────────── */
+
+/* Document preview container — mimics an A4/A3 sheet on screen */
+.doc-preview {
+  background: #fff;
+  color: #000;
+  font-family: 'Noto Sans Devanagari', 'Mangal', 'Kalimati', Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.doc-preview table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.doc-preview th,
+.doc-preview td {
+  border: 1px solid #000;
+  padding: 4px 6px;
+  vertical-align: top;
+  font-size: 11px;
+  font-family: inherit;
+}
+
+.doc-preview th {
+  background: #f3f4f6;
+  font-weight: 600;
+  text-align: center;
+}
+
+.doc-preview .header-line {
+  text-align: center;
+  margin: 2px 0;
+}
+
+.doc-preview .header-line.title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.doc-preview .header-line.sub {
+  font-size: 12px;
+}
+
+.doc-preview .section-title {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 12px 0 6px;
+  border-bottom: 2px solid #000;
+  padding-bottom: 3px;
+}
+
+.doc-preview .info-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0;
+}
+
+.doc-preview .signature-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 40px;
+  font-size: 11px;
+}
+
+.doc-preview .signature-block {
+  text-align: center;
+  width: 30%;
+}
+
+.doc-preview .signature-line {
+  border-top: 1px solid #000;
+  margin-bottom: 4px;
+  margin-top: 30px;
+}
+
+@page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+/* ── Print rules ──────────────────────────────────────────────
+   When user presses Ctrl+P, only the .doc-preview content prints.
+   Everything else on the page is hidden.
+   ──────────────────────────────────────────────────────────── */
+@media print {
+  body * { visibility: hidden !important; }
+  #printArea, #printArea * { visibility: visible !important; }
+  #printArea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+  #printArea.doc-preview {
+    font-size: 10px;
+  }
+  #printArea table th,
+  #printArea table td {
+    font-size: 9px;
+    padding: 3px 4px;
+  }
+  #printArea .header-line.title { font-size: 13px; }
+  #printArea .header-line.sub { font-size: 11px; }
+
+  /* Remove borders/shadows from containers */
+  .no-print { display: none !important; }
+}

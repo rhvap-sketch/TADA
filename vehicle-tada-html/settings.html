@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>सेटिङ</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50">
+
+<main class="p-4 md:p-8 max-w-4xl">
+  <h1 class="text-3xl font-bold text-slate-800 mb-6">संस्थागत सेटिङ</h1>
+
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold text-lg mb-4">कार्यालय जानकारी</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div><label class="block text-sm mb-1">प्रदेश</label>
+        <input id="province" class="w-full px-3 py-2 border rounded-lg"></div>
+      <div><label class="block text-sm mb-1">मन्त्रालय</label>
+        <input id="ministry" class="w-full px-3 py-2 border rounded-lg"></div>
+      <div class="md:col-span-2"><label class="block text-sm mb-1">कार्यक्रम</label>
+        <input id="program" class="w-full px-3 py-2 border rounded-lg"></div>
+      <div class="md:col-span-2"><label class="block text-sm mb-1">कार्यालय</label>
+        <input id="office" class="w-full px-3 py-2 border rounded-lg"></div>
+      <div><label class="block text-sm mb-1">कार्यालय कोड</label>
+        <input id="officeCode" class="w-full px-3 py-2 border rounded-lg"></div>
+      <div><label class="block text-sm mb-1">ठेगाना</label>
+        <input id="address" class="w-full px-3 py-2 border rounded-lg"></div>
+    </div>
+    <button onclick="saveOrg()" class="mt-4 bg-blue-700 text-white px-5 py-2 rounded-lg hover:bg-blue-800">
+      सुरक्षित गर्नुहोस्
+    </button>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold text-lg mb-4">डाटा ब्याकअप</h2>
+    <p class="text-sm text-slate-500 mb-3">
+      JSON फाइलको रूपमा सबै डाटा डाउनलोड गर्नुहोस् (लगबुक, भ्रमण आदेश, प्रयोगकर्ता, मास्टर डाटा)।
+    </p>
+    <button onclick="backup()" class="bg-green-700 text-white px-5 py-2 rounded-lg hover:bg-green-800">
+      ⬇️ JSON ब्याकअप डाउनलोड
+    </button>
+  </div>
+
+  <div id="dangerZone" class="hidden bg-white rounded-xl shadow-sm border-2 border-red-300 p-6">
+    <h2 class="font-bold text-lg mb-2 text-red-700">⚠️ खतरा क्षेत्र — एडमिन मात्र</h2>
+    <p class="text-sm text-red-600 mb-4">
+      यो कार्यले <b>सबै डाटा</b> मेटाउनेछ — प्रयोगकर्ता, RHVAP ID, कागजात, मास्टर डाटा, अडिट लग।
+      पहिले ब्याकअप लिनुहोस्। यो फिर्ता गर्न सकिँदैन।
+    </p>
+    <button onclick="adminReset()" class="bg-red-700 text-white px-5 py-2 rounded-lg hover:bg-red-800 font-semibold">
+      🗑️ सबै डाटा रिसेट गर्नुहोस्
+    </button>
+  </div>
+</main>
+
+<script src="assets/js/storage.js"></script>
+<script src="assets/js/dates.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  if (!App.requireAuth()) throw new Error('redirect');
+  App.renderShell('settings.html');
+
+  var org = DB.getOrg();
+  ['province','ministry','program','office','officeCode','address'].forEach(function(k) {
+    var el = document.getElementById(k);
+    if (el) el.value = org[k] || '';
+  });
+
+  // Show the danger zone only to admins
+  var me = App.currentUser();
+  if (me && me.role === 'ADMIN') {
+    document.getElementById('dangerZone').classList.remove('hidden');
+  }
+
+  function saveOrg() {
+    var o = {};
+    ['province','ministry','program','office','officeCode','address'].forEach(function(k) {
+      var el = document.getElementById(k);
+      o[k] = el ? el.value : '';
+    });
+    DB.setOrg(o);
+    DB.audit('ORG_UPDATED', {});
+    App.toast('✅ सुरक्षित भयो', 'success');
+  }
+
+  function backup() {
+    var data = {
+      logbooks: DB.getLogbooks(),
+      tada: DB.getTada(),
+      users: DB.getUsers(),
+      vehicles: DB.getVehicles(),
+      drivers: DB.getDrivers(),
+      machineryNames: DB.getMachineryNames(),
+      org: DB.getOrg(),
+      sequences: DB.get(DB.KEYS.SEQUENCES),
+      audit: DB.getAudit(),
+      exportedAt: new Date().toISOString(),
+      exportedBy: App.currentUser().userId,
+    };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'vehicle-bhraman-backup-' + Date.now() + '.json';
+    a.click();
+  }
+
+  function adminReset() {
+    // Double confirmation
+    var confirm1 = confirm(
+      '⚠️ सबै डाटा मेटिनेछ — प्रयोगकर्ता, RHVAP ID, कागजात, सबै।\n\nके तपाईं निश्चित हुनुहुन्छ?'
+    );
+    if (!confirm1) return;
+
+    var typed = prompt(
+      'पुष्टि गर्न कृपया "RESET" लेख्नुहोस् (क्यापिटल अक्षरमा):'
+    );
+    if (typed !== 'RESET') {
+      App.toast('रद्द गरियो — "RESET" मिलेन', 'warn');
+      return;
+    }
+
+    try {
+      DB.resetAll();
+      App.toast('✅ सिस्टम रिसेट भयो — लगआउट हुँदै', 'success');
+      setTimeout(function() {
+        window.location.href = 'index.html';
+      }, 1200);
+    } catch (e) {
+      App.toast('❌ ' + e.message, 'error');
+    }
+  }
+</script>
+</body>
+</html>

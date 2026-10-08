@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>भ्रमण आदेश सूची</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50">
+
+<main class="p-4 md:p-8">
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-slate-800" id="pageTitle">मेरो भ्रमण आदेश</h1>
+      <p class="text-slate-500" id="pageSubtitle"></p>
+    </div>
+    <a href="tada-new.html" class="bg-blue-700 text-white px-5 py-2.5 rounded-lg hover:bg-blue-800">+ नयाँ</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-4 border-b flex flex-wrap gap-2">
+      <input id="search" type="text" placeholder="खोज्नुहोस्..."
+             class="flex-1 max-w-md px-4 py-2 border rounded-lg">
+      <select id="filterStatus" onchange="render()" class="px-3 py-2 border rounded-lg text-sm">
+        <option value="ALL">सबै स्थिति</option>
+        <option value="PENDING">प्रतिक्षामा</option>
+        <option value="APPROVED">स्वीकृत</option>
+        <option value="REJECTED">अस्वीकृत</option>
+      </select>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-700">
+          <tr>
+            <th class="p-3 text-left">भ्रमण आदेश नं</th>
+            <th class="p-3 text-left">कर्मचारी</th>
+            <th class="p-3 text-left">गन्तव्य</th>
+            <th class="p-3 text-left">अवधि</th>
+            <th class="p-3 text-left">स्थिति</th>
+            <th class="p-3 text-left">बनाउने</th>
+            <th class="p-3 text-right">कार्य</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script src="assets/js/storage.js"></script>
+<script src="assets/js/dates.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/excel.js"></script>
+<script src="assets/js/tada.js"></script>
+<script>
+  if (!App.requireAuth()) throw new Error('redirect');
+  App.renderShell('tada-list.html');
+
+  const me = App.currentUser();
+  const isAdmin = me.role === 'ADMIN';
+  document.getElementById('pageTitle').textContent = isAdmin ? 'सबै भ्रमण आदेश' : 'मेरो भ्रमण आदेश';
+  document.getElementById('pageSubtitle').textContent = isAdmin ? '(All Travel Orders)' : '(' + me.userId + ')';
+
+  function statusBadge(s) {
+    if (s === 'APPROVED') return '<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs font-semibold">स्वीकृत</span>';
+    if (s === 'REJECTED') return '<span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs font-semibold">अस्वीकृत</span>';
+    return '<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs font-semibold">प्रतिक्षामा</span>';
+  }
+
+  function displayNumber(t) {
+    return (t.status === 'APPROVED' && t.approvedOrderNumber)
+      ? t.approvedOrderNumber
+      : (t.draftId || 'मस्यौदा');
+  }
+
+  function render() {
+    const q = document.getElementById('search').value.toLowerCase();
+    const statusF = document.getElementById('filterStatus').value;
+
+    let all = DB.getTada()
+      .filter(function(t) { return isAdmin || t.createdByUserId === me.userId; })
+      .slice()
+      .reverse();
+
+    if (q) {
+      all = all.filter(function(t) {
+        return (t.approvedOrderNumber || t.draftId || '').toLowerCase().indexOf(q) !== -1 ||
+               (t.employeeName || '').toLowerCase().indexOf(q) !== -1 ||
+               (t.destination || '').toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    if (statusF !== 'ALL') {
+      all = all.filter(function(t) { return t.status === statusF; });
+    }
+
+    if (all.length === 0) {
+      document.getElementById('rows').innerHTML =
+        '<tr><td colspan="7" class="p-8 text-center text-slate-400">कुनै रेकर्ड छैन</td></tr>';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < all.length; i++) {
+      var t = all[i];
+      var numClass = t.status === 'APPROVED' ? 'text-blue-700' : 'text-slate-600';
+      html += '<tr class="border-t hover:bg-slate-50">';
+      html += '<td class="p-3 font-medium ' + numClass + '">' + esc(displayNumber(t)) + '</td>';
+      html += '<td class="p-3">' + esc(t.employeeName) + '</td>';
+      html += '<td class="p-3">' + esc(t.destination) + '</td>';
+      html += '<td class="p-3">' + esc(t.startBs) + ' – ' + esc(t.endBs) + ' (' + t.durationDays + ' दिन)</td>';
+      html += '<td class="p-3">' + statusBadge(t.status) + '</td>';
+      html += '<td class="p-3 text-xs text-slate-500">' + esc(t.createdByName) +
+              '<br><span class="font-mono">' + esc(t.createdByUserId) + '</span></td>';
+      html += '<td class="p-3 text-right">';
+      html += '<button onclick="viewRecord(\'' + t.id + '\')" class="text-blue-700 hover:underline text-xs">👁️ हेर्नुहोस्</button>';
+      html += '</td></tr>';
+    }
+    document.getElementById('rows').innerHTML = html;
+  }
+
+  function viewRecord(id) {
+    var t = DB.findTadaById(id);
+    if (!t) return;
+    if (typeof openTadaPrintWindow === 'function') {
+      openTadaPrintWindow(t);
+    } else {
+      alert('Print function not loaded. Check tada.js.');
+    }
+  }
+
+  document.getElementById('search').addEventListener('input', render);
+  render();
+</script>
+</body>
+</html>

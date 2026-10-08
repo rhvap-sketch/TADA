@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>लगबुक सूची</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50">
+
+<main class="p-4 md:p-8">
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-slate-800" id="pageTitle">मेरो लगबुक</h1>
+      <p class="text-slate-500" id="pageSubtitle"></p>
+    </div>
+    <a href="logbook-new.html" class="bg-blue-700 text-white px-5 py-2.5 rounded-lg hover:bg-blue-800">+ नयाँ</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-4 border-b flex flex-wrap gap-2">
+      <input id="search" type="text" placeholder="खोज्नुहोस्..."
+             class="flex-1 max-w-md px-4 py-2 border rounded-lg">
+      <select id="filterStatus" onchange="render()" class="px-3 py-2 border rounded-lg text-sm">
+        <option value="ALL">सबै स्थिति</option>
+        <option value="PENDING">प्रतिक्षामा</option>
+        <option value="APPROVED">स्वीकृत</option>
+        <option value="REJECTED">अस्वीकृत</option>
+      </select>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-700">
+          <tr>
+            <th class="p-3 text-left">कागजात नं</th>
+            <th class="p-3 text-left">सवारी</th>
+            <th class="p-3 text-left">चालक</th>
+            <th class="p-3 text-right">जम्मा KM</th>
+            <th class="p-3 text-right">इन्धन</th>
+            <th class="p-3 text-left">मिति</th>
+            <th class="p-3 text-left">स्थिति</th>
+            <th class="p-3 text-right">कार्य</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script src="assets/js/storage.js"></script>
+<script src="assets/js/dates.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/excel.js"></script>
+<script src="assets/js/logbook.js"></script>
+<script>
+  if (!App.requireAuth()) throw new Error('redirect');
+  App.renderShell('logbook-list.html');
+
+  const me = App.currentUser();
+  const isAdmin = me.role === 'ADMIN';
+  document.getElementById('pageTitle').textContent = isAdmin ? 'सबै लगबुक' : 'मेरो लगबुक';
+  document.getElementById('pageSubtitle').textContent = isAdmin ? '(All Logbooks)' : '(' + me.userId + ')';
+
+  function statusBadge(s) {
+    if (s === 'APPROVED') return '<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs font-semibold">स्वीकृत</span>';
+    if (s === 'REJECTED') return '<span class="px-2 py-0.5 rounded bg-red-100 text-red-800 text-xs font-semibold">अस्वीकृत</span>';
+    return '<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs font-semibold">प्रतिक्षामा</span>';
+  }
+
+  function displayNumber(l) {
+    return (l.status === 'APPROVED' && l.approvedRecordNumber)
+      ? l.approvedRecordNumber
+      : (l.draftId || 'मस्यौदा');
+  }
+
+  function render() {
+    const q = document.getElementById('search').value.toLowerCase();
+    const statusF = document.getElementById('filterStatus').value;
+
+    let all = DB.getLogbooks()
+      .filter(function(l) { return isAdmin || l.createdByUserId === me.userId; })
+      .slice()
+      .reverse();
+
+    if (q) {
+      all = all.filter(function(l) {
+        return (l.approvedRecordNumber || l.draftId || '').toLowerCase().indexOf(q) !== -1 ||
+               (l.vehicleNumber || '').toLowerCase().indexOf(q) !== -1 ||
+               (l.driverName || '').toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    if (statusF !== 'ALL') {
+      all = all.filter(function(l) { return l.status === statusF; });
+    }
+
+    if (all.length === 0) {
+      document.getElementById('rows').innerHTML =
+        '<tr><td colspan="8" class="p-8 text-center text-slate-400">कुनै रेकर्ड छैन</td></tr>';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < all.length; i++) {
+      var l = all[i];
+      var numClass = l.status === 'APPROVED' ? 'text-blue-700' : 'text-slate-600';
+      html += '<tr class="border-t hover:bg-slate-50">';
+      html += '<td class="p-3 font-medium ' + numClass + '">' + esc(displayNumber(l)) + '</td>';
+      html += '<td class="p-3">' + esc(l.vehicleNumber) + '</td>';
+      html += '<td class="p-3">' + esc(l.driverName) + '</td>';
+      html += '<td class="p-3 text-right font-semibold">' + (l.totalKm || 0) + '</td>';
+      html += '<td class="p-3 text-right">' + (l.totalFuel || 0).toFixed(2) + '</td>';
+      html += '<td class="p-3 text-slate-500">' + esc(l.documentDateBs || l.createdAtBs) + '</td>';
+      html += '<td class="p-3">' + statusBadge(l.status) + '</td>';
+      html += '<td class="p-3 text-right">';
+      html += '<button onclick="viewRecord(\'' + l.id + '\')" class="text-blue-700 hover:underline text-xs">👁️ हेर्नुहोस्</button>';
+      html += '</td></tr>';
+    }
+    document.getElementById('rows').innerHTML = html;
+  }
+
+  function viewRecord(id) {
+    var l = DB.findLogbookById(id);
+    if (!l) return;
+    if (typeof openLogbookPrintWindow === 'function') {
+      openLogbookPrintWindow(l);
+    } else {
+      alert('Print function not loaded. Check logbook.js.');
+    }
+  }
+
+  document.getElementById('search').addEventListener('input', render);
+  render();
+</script>
+</body>
+</html>
