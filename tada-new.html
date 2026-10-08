@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>नयाँ भ्रमण आदेश</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .doc-preview {
+    background: #fff;
+    color: #000;
+    font-family: 'Noto Sans Devanagari', 'Mangal', 'Kalimati', Arial, sans-serif;
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 24px 32px;
+  }
+  .doc-preview table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+  .doc-preview table, .doc-preview th, .doc-preview td { border: 1px solid #000 !important; }
+  .doc-preview th, .doc-preview td {
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    vertical-align: top;
+  }
+  .doc-preview th { background: #f3f4f6; font-weight: 600; text-align: center; }
+  .doc-preview .header-line { text-align: center; margin: 3px 0; }
+  .doc-preview .header-line.title { font-size: 16px; font-weight: 700; margin-top: 10px; }
+  .doc-preview .header-line.sub { font-size: 13px; }
+  .doc-preview .section-title {
+    text-align: center; font-size: 15px; font-weight: 700;
+    margin: 18px 0 10px; padding-bottom: 5px;
+    border-bottom: 2px solid #000;
+  }
+  .doc-preview .field-row { display: flex; margin: 8px 0; font-size: 12px; }
+  .doc-preview .field-row .label { font-weight: 600; min-width: 42%; }
+  .doc-preview .field-row .value { flex: 1; }
+  .doc-preview .signature-row {
+    display: flex; justify-content: space-between;
+    margin-top: 60px; font-size: 12px;
+  }
+  .doc-preview .signature-block { text-align: center; width: 30%; }
+  .doc-preview .signature-line { border-top: 1px solid #000; margin: 40px 0 6px; }
+  .doc-preview .order-header {
+    display: flex; justify-content: space-between;
+    margin: 14px 0; font-size: 12px;
+  }
+  .doc-preview .order-header .right { text-align: right; }
+  .doc-preview .divider { border-top: 2px dashed #000; margin: 24px 0 12px; }
+  .doc-preview .admin-section {
+    font-size: 11px; color: #333;
+    background: #fafafa; padding: 10px 14px;
+    border: 1px solid #999;
+  }
+  .doc-preview .admin-section h4 { font-weight: 700; margin: 0 0 6px 0; font-size: 12px; }
+  .doc-preview .emblem { text-align: center; margin-bottom: 6px; }
+  .doc-preview .emblem img { width: 60px; height: 60px; object-fit: contain; display: inline-block; }
+
+  @media print {
+    body * { visibility: hidden !important; }
+    #printArea, #printArea * { visibility: visible !important; }
+    #printArea {
+      position: absolute; left: 0; top: 0;
+      width: 100%; padding: 0; margin: 0;
+      box-shadow: none !important;
+    }
+    .no-print { display: none !important; }
+    @page { size: A4 portrait; margin: 12mm; }
+  }
+</style>
+</head>
+<body class="bg-slate-50">
+
+<main class="p-4 md:p-8 max-w-4xl">
+  <h1 class="text-3xl font-bold text-slate-800 mb-2">नयाँ भ्रमण आदेश</h1>
+  <p class="text-slate-500 mb-8">New Travel Order</p>
+
+  <form id="tadaForm" class="space-y-6">
+
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <h2 class="font-bold text-lg mb-4">संस्थागत जानकारी</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium mb-1">कार्यालय कोड</label>
+          <input id="officeCode" readonly class="w-full px-3 py-2 border rounded-lg bg-slate-50">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">भ्रमण प्रकार *</label>
+          <select id="travelType" required class="w-full px-3 py-2 border rounded-lg">
+            <option value="अन्तरदेशीय">अन्तरदेशीय</option>
+            <option value="अन्तराष्ट्रिय">अन्तराष्ट्रिय</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">आदेश मिति (BS) *</label>
+          <input id="orderDateBs" required class="w-full px-3 py-2 border rounded-lg" placeholder="2083/06/16">
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <h2 class="font-bold text-lg mb-4">कर्मचारी जानकारी</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">कर्मचारी *</label>
+          <select id="employeeId" required class="w-full px-3 py-2 border rounded-lg">
+            <option value="">-- छान्नुहोस् --</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">पद</label>
+          <input id="position" readonly class="w-full px-3 py-2 border rounded-lg bg-slate-50">
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <h2 class="font-bold text-lg mb-4">भ्रमण विवरण</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium mb-1">कार्यालय</label>
+          <input id="office" readonly class="w-full px-3 py-2 border rounded-lg bg-slate-50">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">भ्रमण स्थान *</label>
+          <input id="destination" required class="w-full px-3 py-2 border rounded-lg" placeholder="जोरायल">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">सुरु मिति (BS) *</label>
+          <input id="startBs" required class="w-full px-3 py-2 border rounded-lg" placeholder="2083/06/17" oninput="recalcDuration()">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">अन्त्य मिति (BS) *</label>
+          <input id="endBs" required class="w-full px-3 py-2 border rounded-lg" placeholder="2083/06/20" oninput="recalcDuration()">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">अवधि</label>
+          <input id="duration" readonly class="w-full px-3 py-2 border rounded-lg bg-slate-50">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium mb-1">भ्रमणको उद्देश्य *</label>
+          <textarea id="purpose" required rows="3" class="w-full px-3 py-2 border rounded-lg"
+                    placeholder="MSP बैठकमा सहभागी हुन ।"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <h2 class="font-bold text-lg mb-4">भ्रमण साधन</h2>
+      <div class="flex flex-wrap gap-6">
+        <label class="flex items-center gap-2">
+          <input type="checkbox" id="transportOffice"> कार्यालयको
+        </label>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" id="transportPublic"> सार्वजनिक
+        </label>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" id="transportHired"> भाडाको
+        </label>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <h2 class="font-bold text-lg mb-4">पेश्की र अन्य</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">पेश्की रकम (रु.)</label>
+          <input id="advanceAmount" type="number" step="0.01" class="w-full px-3 py-2 border rounded-lg">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium mb-1">अन्य विवरण</label>
+          <textarea id="otherDetails" rows="2" class="w-full px-3 py-2 border rounded-lg"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <div class="flex flex-wrap gap-3">
+      <button type="button" onclick="previewTada()"
+              class="bg-green-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-800">
+        👁️ पूर्वावलोकन र प्रिन्ट
+      </button>
+      <button type="button" onclick="downloadExcelOnly()"
+              class="bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-800">
+        📊 Excel मात्र
+      </button>
+      <button type="reset" class="bg-slate-200 text-slate-700 px-6 py-3 rounded-lg font-semibold hover:bg-slate-300">
+        रिसेट
+      </button>
+    </div>
+  </form>
+</main>
+
+<div id="previewModal" class="hidden fixed inset-0 bg-black/60 z-50 overflow-y-auto p-4">
+  <div class="max-w-[900px] mx-auto bg-white rounded-xl shadow-2xl my-4">
+    <div class="no-print sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10 rounded-t-xl">
+      <div>
+        <h3 class="font-bold text-lg">भ्रमण आदेश पूर्वावलोकन</h3>
+        <p class="text-xs text-slate-500" id="previewRecordNo"></p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="printPreview()"
+                class="bg-green-700 text-white px-5 py-2 rounded-lg hover:bg-green-800 font-semibold">
+          🖨️ प्रिन्ट / PDF सेभ
+        </button>
+        <button onclick="downloadExcelFromPreview()"
+                class="bg-blue-700 text-white px-5 py-2 rounded-lg hover:bg-blue-800 font-semibold">
+          ⬇️ Excel डाउनलोड
+        </button>
+        <button onclick="closePreview()"
+                class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300">
+          ✕ बन्द
+        </button>
+      </div>
+    </div>
+    <div class="p-6 bg-slate-100">
+      <div id="printArea" class="doc-preview shadow-lg"></div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/storage.js"></script>
+<script src="assets/js/dates.js"></script>
+<script src="assets/js/bs-date-picker.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/excel.js"></script>
+<script src="assets/js/tada.js"></script>
+<script>
+  if (!App.requireAuth()) throw new Error('redirect');
+  App.renderShell('tada-new.html');
+</script>
+</body>
+</html>

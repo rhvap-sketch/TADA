@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>एडमिन</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50">
+
+<main class="p-4 md:p-8">
+  <h1 class="text-3xl font-bold text-slate-800 mb-6">एडमिन प्यानल</h1>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <h2 class="font-bold text-lg mb-4">सवारी साधनहरू</h2>
+      <div id="vehiclesList" class="space-y-2 text-sm max-h-64 overflow-y-auto"></div>
+      <div class="flex gap-2 mt-4">
+        <input id="newVehicleNum" placeholder="सवारी नं." class="flex-1 px-3 py-2 border rounded-lg text-sm">
+        <input id="newVehicleName" placeholder="नाम" class="flex-1 px-3 py-2 border rounded-lg text-sm">
+        <button onclick="addVehicle()" class="bg-blue-700 text-white px-4 rounded-lg text-sm">+</button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <h2 class="font-bold text-lg mb-4">चालक/अपरेटर</h2>
+      <div id="driversList" class="space-y-2 text-sm max-h-64 overflow-y-auto"></div>
+      <div class="flex gap-2 mt-4">
+        <input id="newDriverName" placeholder="नाम" class="flex-1 px-3 py-2 border rounded-lg text-sm">
+        <input id="newDriverPos" placeholder="पद" class="flex-1 px-3 py-2 border rounded-lg text-sm">
+        <button onclick="addDriver()" class="bg-blue-700 text-white px-4 rounded-lg text-sm">+</button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:col-span-2">
+      <h2 class="font-bold text-lg mb-4">अडिट लग (पछिल्ला 50)</h2>
+      <div id="auditList" class="text-xs font-mono max-h-80 overflow-y-auto bg-slate-50 p-3 rounded-lg"></div>
+    </div>
+  </div>
+</main>
+
+<script src="assets/js/storage.js"></script>
+<script src="assets/js/dates.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  if (!App.requireAdmin()) throw new Error('redirect');
+  App.renderShell('admin.html');
+
+  function renderVehicles() {
+    const vs = DB.getVehicles();
+    document.getElementById('vehiclesList').innerHTML = vs.map(v => `
+      <div class="flex items-center justify-between py-1 border-b last:border-0">
+        <span>${v.number} <span class="text-slate-400">— ${v.name}</span></span>
+        <button onclick="removeVehicle('${v.id}')" class="text-red-600 text-xs">हटाउनु</button>
+      </div>`).join('') || '<div class="text-slate-400">कुनै छैन</div>';
+  }
+  function addVehicle() {
+    const num = document.getElementById('newVehicleNum').value.trim();
+    const name = document.getElementById('newVehicleName').value.trim();
+    if (!num || !name) return App.toast('सबै फिल्ड भर्नुहोस्', 'warn');
+    const vs = DB.getVehicles();
+    vs.push({ id: DB.uid(), number: num, name, active: true });
+    DB.setVehicles(vs);
+    document.getElementById('newVehicleNum').value = '';
+    document.getElementById('newVehicleName').value = '';
+    renderVehicles();
+  }
+  function removeVehicle(id) {
+    if (!confirm('हटाउने?')) return;
+    DB.setVehicles(DB.getVehicles().filter(v => v.id !== id));
+    renderVehicles();
+  }
+
+  function renderDrivers() {
+    const ds = DB.getDrivers();
+    document.getElementById('driversList').innerHTML = ds.map(d => `
+      <div class="flex items-center justify-between py-1 border-b last:border-0">
+        <span>${d.name} <span class="text-slate-400">— ${d.position}</span></span>
+        <button onclick="removeDriver('${d.id}')" class="text-red-600 text-xs">हटाउनु</button>
+      </div>`).join('') || '<div class="text-slate-400">कुनै छैन</div>';
+  }
+  function addDriver() {
+    const name = document.getElementById('newDriverName').value.trim();
+    const pos = document.getElementById('newDriverPos').value.trim();
+    if (!name) return App.toast('नाम भर्नुहोस्', 'warn');
+    const ds = DB.getDrivers();
+    ds.push({ id: DB.uid(), name, position: pos, level: 'अधिकृत', active: true });
+    DB.setDrivers(ds);
+    document.getElementById('newDriverName').value = '';
+    document.getElementById('newDriverPos').value = '';
+    renderDrivers();
+  }
+  function removeDriver(id) {
+    if (!confirm('हटाउने?')) return;
+    DB.setDrivers(DB.getDrivers().filter(d => d.id !== id));
+    renderDrivers();
+  }
+
+  function renderAudit() {
+    const logs = DB.getAudit().slice(-50).reverse();
+    document.getElementById('auditList').innerHTML = logs.map(l =>
+      `<div>[${l.createdAt.slice(0,19)}] ${l.userEmail} → ${l.action}${l.recordId ? ' #' + l.recordId : ''}</div>`
+    ).join('') || 'कुनै लग छैन';
+  }
+
+  renderVehicles(); renderDrivers(); renderAudit();
+</script>
+</body>
+</html>

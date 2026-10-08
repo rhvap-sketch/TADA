@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>प्रयोगकर्ता — Users</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50">
+
+<main class="p-4 md:p-8">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-slate-800">प्रयोगकर्ता व्यवस्थापन</h1>
+    <p class="text-slate-500">User Management</p>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-700">
+          <tr>
+            <th class="p-3 text-left">User ID</th>
+            <th class="p-3 text-left">नाम</th>
+            <th class="p-3 text-left">इमेल</th>
+            <th class="p-3 text-left">भूमिका</th>
+            <th class="p-3 text-left">स्थिति</th>
+            <th class="p-3 text-left">दर्ता</th>
+            <th class="p-3 text-right">कार्य</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script src="assets/js/storage.js"></script>
+<script src="assets/js/dates.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  if (!App.requireAdmin()) throw new Error('redirect');
+  App.renderShell('users.html');
+
+  function render() {
+    const users = DB.getUsers();
+    const me = App.currentUser();
+
+    document.getElementById('rows').innerHTML = users.map(u => {
+      const isMe = u.userId === me.userId;
+      return `
+      <tr class="border-t hover:bg-slate-50">
+        <td class="p-3 font-mono text-blue-700">${u.userId}</td>
+        <td class="p-3 font-medium">${u.name}${isMe ? ' <span class="text-xs text-slate-400">(तपाईं)</span>' : ''}</td>
+        <td class="p-3 text-slate-600">${u.email}</td>
+        <td class="p-3">
+          <select onchange="changeRole('${u.id}', this.value)" ${isMe ? 'disabled' : ''}
+                  class="px-2 py-1 border rounded text-xs ${isMe ? 'bg-slate-100' : ''}">
+            <option value="USER" ${u.role==='USER'?'selected':''}>USER</option>
+            <option value="ADMIN" ${u.role==='ADMIN'?'selected':''}>ADMIN</option>
+          </select>
+        </td>
+        <td class="p-3">
+          <span class="px-2 py-0.5 rounded text-xs font-semibold ${u.active ? 'bg-green-100 text-green-800' : 'bg-slate-200 text-slate-600'}">
+            ${u.active ? 'सक्रिय' : 'निष्क्रिय'}
+          </span>
+        </td>
+        <td class="p-3 text-slate-500 text-xs">${(u.createdAt||'').slice(0,10)}</td>
+        <td class="p-3 text-right space-x-2">
+          <button onclick="resetPassword('${u.id}','${u.name}')"
+                  class="text-xs text-blue-700 hover:underline">पासवर्ड रिसेट</button>
+          ${!isMe ? `
+            <button onclick="toggleActive('${u.id}')"
+                    class="text-xs ${u.active ? 'text-red-700' : 'text-green-700'} hover:underline">
+              ${u.active ? 'निष्क्रिय' : 'सक्रिय'}
+            </button>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function changeRole(id, role) {
+    try {
+      DB.setRole(id, role);
+      App.toast('✅ भूमिका परिवर्तन भयो', 'success');
+      render();
+    } catch (e) { App.toast('❌ ' + e.message, 'error'); }
+  }
+
+  function toggleActive(id) {
+    const u = DB.findUserById(id);
+    if (!u) return;
+    if (!confirm(`${u.active ? 'निष्क्रिय' : 'सक्रिय'} बनाउने?`)) return;
+    try {
+      DB.setActive(id, !u.active);
+      App.toast('✅ परिवर्तन भयो', 'success');
+      render();
+    } catch (e) { App.toast('❌ ' + e.message, 'error'); }
+  }
+
+  async function resetPassword(id, name) {
+    const pwd = prompt(`${name} को नयाँ पासवर्ड (कम्तीमा ६ अक्षर):`);
+    if (pwd === null) return;
+    try {
+      await DB.adminResetPassword(id, pwd);
+      App.toast('✅ पासवर्ड रिसेट भयो', 'success');
+    } catch (e) { App.toast('❌ ' + e.message, 'error'); }
+  }
+
+  render();
+</script>
+</body>
+</html>

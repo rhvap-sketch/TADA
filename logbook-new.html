@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>नयाँ लगबुक</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+/* ── Preview / print styles (embedded so they always apply) ── */
+.doc-preview {
+  background: #fff;
+  color: #000;
+  font-family: 'Noto Sans Devanagari', 'Mangal', 'Kalimati', Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 20px 24px;
+}
+.doc-preview table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+.doc-preview table, .doc-preview th, .doc-preview td {
+  border: 1px solid #000 !important;
+}
+.doc-preview th, .doc-preview td {
+  padding: 4px 6px;
+  font-size: 11px;
+  font-family: inherit;
+  vertical-align: top;
+}
+.doc-preview th { background: #f3f4f6; font-weight: 600; text-align: center; }
+.doc-preview .header-line { text-align: center; margin: 2px 0; }
+.doc-preview .header-line.title { font-size: 15px; font-weight: 700; margin-top: 10px; }
+.doc-preview .header-line.sub { font-size: 12px; }
+.doc-preview .section-title {
+  text-align: center; font-size: 14px; font-weight: 700;
+  margin: 14px 0 8px; padding-bottom: 4px;
+  border-bottom: 2px solid #000;
+}
+.doc-preview .signature-row {
+  display: flex; justify-content: space-between;
+  margin-top: 50px; font-size: 11px;
+}
+.doc-preview .signature-block { text-align: center; width: 30%; }
+.doc-preview .signature-line { border-top: 1px solid #000; margin: 30px 0 4px; }
+.doc-preview .meta-info { display: flex; justify-content: space-between; margin: 12px 0; font-size: 11px; }
+.doc-preview .meta-info div { flex: 1; }
+.doc-preview .meta-info .right { text-align: right; }
+
+/* Print rules — only #printArea prints */
+@media print {
+  body * { visibility: hidden !important; }
+  #printArea, #printArea * { visibility: visible !important; }
+  #printArea {
+    position: absolute; left: 0; top: 0;
+    width: 100%; padding: 0; margin: 0;
+  }
+  .no-print { display: none !important; }
+  @page { size: A3 landscape; margin: 8mm; }
+}
+</style>
+</head>
+<body class="bg-slate-50">
+
+<main class="p-4 md:p-8 max-w-6xl">
+  <h1 class="text-3xl font-bold text-slate-800 mb-2">नयाँ लगबुक प्रविष्टि</h1>
+  <p class="text-slate-500 mb-8">New Logbook Entry</p>
+
+  <form id="logbookForm" class="space-y-6">
+
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <h2 class="font-bold text-lg mb-4 text-slate-800">१. सवारी जानकारी</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">सवारी नं. *</label>
+          <select id="vehicleId" required class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+            <option value="">-- छान्नुहोस् --</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">सवारी साधन/मेसिनरीको नाम *</label>
+          <select id="vehicleName" required class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+            <option value="">-- छान्नुहोस् --</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">चालक/अपरेटर *</label>
+          <select id="driverId" required class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+            <option value="">-- छान्नुहोस् --</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">पद</label>
+          <input id="driverPosition" readonly class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">तह</label>
+          <input id="driverLevel" readonly class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">कार्यालय कोड</label>
+          <input id="officeCode" readonly class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50">
+        </div>
+      </div>
+    </section>
+<!-- 2. Document Date -->
+<section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+  <h2 class="font-bold text-lg mb-4 text-slate-800">२. कागजात मिति</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm font-medium mb-1">कागजात मिति (BS) *</label>
+      <input id="documentDateBs" type="text" placeholder="2083/06/16"
+             class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+      <!-- BS date picker dropdowns are injected here by JS -->
+    </div>
+  </div>
+</section>
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="font-bold text-lg text-slate-800">२. यात्रा विवरण</h2>
+        <button type="button" onclick="addJourneyRow()"
+                class="bg-blue-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-800">
+          + थप्नुहोस्
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-slate-700">
+            <tr>
+              <th class="p-2 text-left">मिति (BS)*</th>
+              <th class="p-2 text-left">बाट*</th>
+              <th class="p-2 text-left">सम्म*</th>
+              <th class="p-2 text-right">सुरु KM*</th>
+              <th class="p-2 text-right">अन्त KM*</th>
+              <th class="p-2 text-right">जम्मा</th>
+              <th class="p-2 text-left">माग फारम नं</th>
+              <th class="p-2 text-right">इन्धन (L)</th>
+              <th class="p-2 text-right">लुब्रिकेन्ट</th>
+              <th class="p-2 text-right">ग्रिज</th>
+              <th class="p-2 text-right">गेयर आयल</th>
+              <th class="p-2 text-right">अन्य</th>
+              <th class="p-2 text-left">उद्देश्य*</th>
+              <th class="p-2 text-left">कर्मचारी*</th>
+              <th class="p-2"></th>
+            </tr>
+          </thead>
+          <tbody id="journeyBody"></tbody>
+          <tfoot class="bg-slate-100 font-semibold">
+            <tr>
+              <td colspan="5" class="p-2 text-right">जम्मा:</td>
+              <td id="totalKm" class="p-2 text-right">0</td>
+              <td></td>
+              <td id="totalFuel" class="p-2 text-right">0</td>
+              <td id="totalLub" class="p-2 text-right">0</td>
+              <td id="totalGrease" class="p-2 text-right">0</td>
+              <td id="totalGear" class="p-2 text-right">0</td>
+              <td id="totalOther" class="p-2 text-right">0</td>
+              <td colspan="3"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <div class="flex flex-wrap gap-3">
+      <button type="button" onclick="previewLogbook()"
+              class="bg-green-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-800">
+        👁️ पूर्वावलोकन र प्रिन्ट
+      </button>
+      <button type="button" onclick="downloadExcelOnly()"
+              class="bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-800">
+        📊 Excel मात्र
+      </button>
+      <button type="reset" class="bg-slate-200 text-slate-700 px-6 py-3 rounded-lg font-semibold hover:bg-slate-300">
+        रिसेट
+      </button>
+    </div>
+  </form>
+</main>
+
+<!-- Preview modal -->
+<div id="previewModal" class="hidden fixed inset-0 bg-black/60 z-50 overflow-y-auto p-4">
+  <div class="max-w-[1400px] mx-auto bg-white rounded-xl shadow-2xl my-4">
+    <div class="no-print sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10 rounded-t-xl">
+      <div>
+        <h3 class="font-bold text-lg">कागजात पूर्वावलोकन</h3>
+        <p class="text-xs text-slate-500" id="previewRecordNo"></p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="printPreview()"
+                class="bg-green-700 text-white px-5 py-2 rounded-lg hover:bg-green-800 font-semibold">
+          🖨️ प्रिन्ट / PDF सेभ
+        </button>
+        <button onclick="downloadExcelFromPreview()"
+                class="bg-blue-700 text-white px-5 py-2 rounded-lg hover:bg-blue-800 font-semibold">
+          ⬇️ Excel डाउनलोड
+        </button>
+        <button onclick="closePreview()"
+                class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300">
+          ✕ बन्द
+        </button>
+      </div>
+    </div>
+    <div class="p-6 bg-slate-100">
+      <div id="printArea" class="doc-preview shadow-lg">
+        <!-- Content injected by previewLogbook() -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/storage.js"></script>
+<script src="assets/js/dates.js"></script>
+<script src="assets/js/bs-date-picker.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/excel.js"></script>
+<script src="assets/js/logbook.js"></script>
+<script>
+  if (!App.requireAuth()) throw new Error('redirect');
+  App.renderShell('logbook-new.html');
+</script>
+</body>
+</html>
